@@ -1,14 +1,42 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, File, UploadFile
 from schemas.job_schema import JobInput,JobProcessed
 from utils.extractData import extract_job_data
 from services.job_service import save_job
+from utils.job_scraper import extract_job_from_url
+import traceback
 
 router = APIRouter()
 
 @router.post("/analyze-job-link")
 async def analyze_job_link(url:str):
-    
+    try:
+        scraped=await extract_job_from_url(url)
 
+        extracted=extract_job_data(scraped["description"])
+
+        job_record={
+            "company":scraped["company"],
+            "job_title":scraped["title"],
+            "job_description":scraped["description"],
+            "skills":extracted["skills"],
+            "experience":extracted["experience"],
+            "keywords":extracted["keywords"],
+            "responsibilities":extracted["responsibilities"]
+        }
+
+        job_id=await save_job(job_record)
+        print(job_id)
+
+        return {"message":"Processed", 
+                "job_id": job_id,
+                "extracted":job_record}
+
+    except Exception as e:
+        return {
+            "error_type": type(e).__name__,
+            "error_message": str(e),
+            "trace": traceback.format_exc()
+        }
 
 
 @router.post("/analyze-job")
@@ -34,8 +62,9 @@ async def analyze_job(data:JobInput):
 
 
 @router.post("/upload-resume")
-async def upload_resume(file):
-    return {"message":"resume uploaded successfully"}
+async def upload_resume(file: UploadFile = File(...)):
+    return {"filename": file.filename,
+            "message":"resume uploaded successfully"}
 
 
 @router.get("/items/{item_id}")

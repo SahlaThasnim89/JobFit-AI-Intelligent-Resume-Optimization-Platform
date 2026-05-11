@@ -16,7 +16,8 @@ def extract_job_data(text:str):
 
     # keywords (basic)
     words=re.findall(r"\b[a-zA-Z]+\b",text_lower)
-    keywords=list(set(words))[:30]
+    STOPWORDS = set(stopwords.words("english"))
+    keywords=[word for word in tokens if word not in STOPWORDS and len(word) > 3]
 
     # Responsibilities (very basic split)
     responsibilities=[line.strip() for line in text.split("\n") if len(line.strip())>20][:10]
