@@ -1,7 +1,11 @@
 import os
-from google import genai
+import json
+from dotenv import load_dotenv
+from groq import Groq
 from pydantic import BaseModel, Field
 from typing import List, Optional
+
+load_dotenv() 
 
 class JobData(BaseModel):
     job_title: str = Field(
@@ -27,69 +31,41 @@ class JobData(BaseModel):
     )
 
 
-client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-def extract_job_data(jd_text: str) -> JobData:
-    """
-    Extract structured data from a job description using Gemini.
-    
-    Args:
-        jd_text: raw job description text
-    
-    Returns:
-        JobData object with all extracted fields
-    """
-    prompt = f"""
-    Extract structured information from the following job description.
-    Be precise and only extract what is explicitly mentioned.
-    
-    Job Description:
-    {jd_text}
-    """
+def extract_job_data(jd_text: str) -> dict:
+    prompt = f"""Extract structured information from this job description.
+Return ONLY a JSON object with these exact keys:
+- skills: list of required technical skills
+- experience: years of experience required (string)
+- keywords: important keywords from the JD
+- responsibilities: list of key responsibilities (max 8)
+- tech_stack: technologies and tools mentioned
+- seniority_level: Junior/Mid/Senior/Lead/Not specified
 
-    response = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=prompt,
-        config={
-            "response_mime_type": "application/json",
-            "response_schema": JobData,
-        },
+Job Description:
+{jd_text}
+
+Return only the JSON object, no other text."""
+
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=1000,
+        temperature=0.1
     )
 
-    job_data= JobData.model_validate_json(response.text)
+    text = response.choices[0].message.content
+    clean = text.replace("```json", "").replace("```", "").strip()
+    data = json.loads(clean)
+
     return {
-        "skills":           job_data.required_skills,
-        "experience":       job_data.experience_years or "Not specified",
-        "keywords":         job_data.keywords,
-        "responsibilities": job_data.responsibilities,
-        "tech_stack":       job_data.tech_stack,
-        "seniority_level":  job_data.seniority_level or "Not specified",
+        "skills":           data.get("skills", []),
+        "experience":       data.get("experience", "Not specified"),
+        "keywords":         data.get("keywords", []),
+        "responsibilities": data.get("responsibilities", []),
+        "tech_stack":       data.get("tech_stack", []),
+        "seniority_level":  data.get("seniority_level", "Not specified"),
     }
 
-# ── Test it ───────────────────────────────────────────────────
-if __name__ == "__main__":
-    sample_jd = """
-    Senior Python Developer — Bengaluru (Hybrid)
-    
-    We are looking for a Senior Python Developer with 4+ years of experience
-    to join our growing team.
-    
-    Requirements:
-    - Strong proficiency in Python and FastAPI
-    - Experience with PostgreSQL and Redis
-    - Knowledge of Docker and Kubernetes
-    - Familiarity with AWS services (EC2, S3, Lambda)
-    - Experience with React is a plus
-    
-    Responsibilities:
-    - Design and build scalable REST APIs
-    - Collaborate with frontend team on integration
-    - Write unit and integration tests
-    - Participate in code reviews
-    - Deploy and monitor services on AWS
-    
-    Nice to have: experience with Kafka or RabbitMQ
-    """
-    
-    result = extract_job_data(sample_jd)
-    print(result)
+
