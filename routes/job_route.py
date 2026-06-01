@@ -1,6 +1,7 @@
 from fastapi import APIRouter, File, UploadFile
 from schemas.job_schema import JobInput,JobProcessed
-from utils.extractData import extract_job_data
+# from utils.extractData import extract_job_data
+from utils.extractDataWithAI import extract_job_data
 from services.job_service import save_job
 from utils.job_scraper import extract_job_from_url
 import traceback

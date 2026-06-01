@@ -1,7 +1,9 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL="postgresql+asyncpg://postgres:admin123@localhost/resume_db"
+# DATABASE_URL="postgresql+asyncpg://postgres:admin123@localhost/resume_db"
+DATABASE_URL = "sqlite+aiosqlite:///./jobfit.db"
+
 
 engine=create_async_engine(DATABASE_URL,echo=True)
 
