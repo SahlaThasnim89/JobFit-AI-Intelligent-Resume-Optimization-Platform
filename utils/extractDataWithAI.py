@@ -36,6 +36,7 @@ client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 def extract_job_data(jd_text: str) -> dict:
     prompt = f"""Extract structured information from this job description.
 Return ONLY a JSON object with these exact keys:
+- company: The name of the hiring organization/company (e.g., look for context clues like 'About CompanyName').
 - skills: list of required technical skills
 - experience: years of experience required (string)
 - keywords: important keywords from the JD
@@ -60,6 +61,7 @@ Return only the JSON object, no other text."""
     data = json.loads(clean)
 
     return {
+        "company":           data.get("company", ""),
         "skills":           data.get("skills", []),
         "experience":       data.get("experience", "Not specified"),
         "keywords":         data.get("keywords", []),
