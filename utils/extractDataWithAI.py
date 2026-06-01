@@ -8,6 +8,9 @@ from typing import List, Optional
 load_dotenv() 
 
 class JobData(BaseModel):
+    company: str = Field(
+        description="Extract the hiring organization or company name. Look for context clues like 'About CompanyName'. Do not leave empty."
+    )
     job_title: str = Field(
         description="The job title or role being hired for."
     )
@@ -60,8 +63,11 @@ Return only the JSON object, no other text."""
     clean = text.replace("```json", "").replace("```", "").strip()
     data = json.loads(clean)
 
+    print(data)
+
     return {
-        "company":           data.get("company", ""),
+        "company":          data.get("company", "Unknown Company"),
+        "job_title":        data.get("job_title", "Unknown Title"),
         "skills":           data.get("skills", []),
         "experience":       data.get("experience", "Not specified"),
         "keywords":         data.get("keywords", []),
